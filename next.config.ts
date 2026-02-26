@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: "standalone",
+  transpilePackages: ["@livekit/components-react", "@livekit/components-styles"],
 };
 
 export default nextConfig;

@@ -1,0 +1,108 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id              String   @id @default(cuid())
+  name            String
+  email           String   @unique
+  meetingsCreated Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  hostedMeetings   Meeting[]            @relation("HostedMeetings")
+  participations   MeetingParticipant[]
+  publicNotes      PublicNote[]
+  privateNotes     PrivateNote[]
+  transcriptLines  TranscriptLine[]
+}
+
+model Meeting {
+  id           String        @id @default(cuid())
+  roomCode     String        @unique
+  title        String?
+  hostId       String
+  status       String        @default("waiting") // waiting | active | ended
+  startedAt    DateTime?
+  endedAt      DateTime?
+  recordingUrl String?
+  createdAt    DateTime      @default(now())
+
+  host         User                 @relation("HostedMeetings", fields: [hostId], references: [id])
+  participants MeetingParticipant[]
+  publicNotes  PublicNote[]
+  privateNotes PrivateNote[]
+  transcript   TranscriptLine[]
+  summary      MeetingSummary?
+}
+
+model MeetingParticipant {
+  id        String   @id @default(cuid())
+  meetingId String
+  userId    String
+  joinedAt  DateTime @default(now())
+  leftAt    DateTime?
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([meetingId, userId])
+}
+
+model PublicNote {
+  id               String   @id @default(cuid())
+  meetingId        String
+  userId           String
+  content          String
+  meetingTimestamp Int      @default(0) // seconds since meeting started
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+}
+
+model PrivateNote {
+  id               String   @id @default(cuid())
+  meetingId        String
+  userId           String
+  content          String
+  meetingTimestamp Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+}
+
+model TranscriptLine {
+  id               String   @id @default(cuid())
+  meetingId        String
+  userId           String?
+  speakerName      String?
+  text             String
+  language         String?
+  meetingTimestamp Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id])
+}
+
+model MeetingSummary {
+  id          String   @id @default(cuid())
+  meetingId   String   @unique
+  transcript  String   // full joined transcript
+  summary     String   // AI-generated smart summary
+  mom         String   // Minutes of Meeting
+  actionItems String   // JSON array of action items
+  emailSentAt DateTime?
+  createdAt   DateTime @default(now())
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+}
